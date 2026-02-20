@@ -427,7 +427,8 @@ a {
 }
 
 </style>
-</head>
+<script type="text/javascript" nonce="19192245bf994671b38863021a4" src="//local.adguard.org?ts=1771559362765&amp;type=content-script&amp;dmn=chatgpt.com&amp;pth=%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile-TAndu5Rmp7No4zzoCZ37m7%26ts%3D492099%26p%3Dfs%26cid%3D1%26sig%3D3a249dbc1c38578919d1ca1096fe1a5ca2399c292cd35a8529f91597e50d39db%26v%3D0&amp;app=com.google.Chrome&amp;css=2&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=1"></script>
+<script type="text/javascript" nonce="19192245bf994671b38863021a4" src="//local.adguard.org?ts=1771559362765&amp;name=AdGuard%20Extra&amp;type=user-script"></script></head>
 <body>
   <h1>Libro de los Textos - This War of Mine</h1>
   
@@ -570,7 +571,71 @@ a {
     <audio id="audio-player"></audio>
   </div>
 
+  <!-- Carga el archivo de respaldo con los textos locales. Este archivo define window.TEXTS como objeto. -->
   <script src="texts-data.js"></script>
+
+  <!--
+    Para permitir que la aplicación obtenga los textos directamente de una hoja de cálculo de Google Sheets
+    y pueda sanitizarlos correctamente, cargamos las librerías PapaParse (para analizar CSV)
+    y DOMPurify (para limpiar el HTML y evitar inyecciones de código). Estas librerías se
+    cargan desde un CDN y son necesarias para la opción de Google Sheets.
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+
+  <!--
+    Definimos funciones auxiliares para sanitizar el HTML recibido de la hoja de cálculo y cargar
+    dinámicamente los textos desde Google Sheets. Si la carga del CSV falla (por ejemplo, porque
+    no hay conexión a Internet), se deja intacto el objeto `window.TEXTS` definido en texts-data.js.
+  -->
+  <script>
+    /*
+     * Sanitiza una cadena de HTML permitiendo únicamente etiquetas básicas. Esto evita
+     * la ejecución de scripts potencialmente maliciosos cuando los textos son editados
+     * por la comunidad en Google Sheets. Solo se permiten etiquetas y atributos
+     * necesarios para formatear texto (negritas, cursivas, saltos de línea, listas y enlaces).
+     */
+    function safeHTML(html) {
+      return DOMPurify.sanitize(html || "", {
+        ALLOWED_TAGS: ['strong','em','br','ul','ol','li','p','span','a'],
+        ALLOWED_ATTR: ['href','title','target','rel','style']
+      });
+    }
+
+    /**
+     * Carga los textos desde una hoja de cálculo de Google Sheets publicada como CSV. Esta
+     * función usa fetch y PapaParse para descargar y analizar el contenido. Cada fila del
+     * CSV debe tener una columna "id" (con el número del texto) y una columna "html"
+     * (con el contenido HTML). Si la descarga del CSV falla, no se modifica el objeto
+     * `window.TEXTS`, de modo que se utilicen los textos locales de respaldo.
+     */
+    async function loadTexts() {
+      const SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT6z8MOCn3sKvo4dfsNhhVkvi7RkM7c9IElP3qaQy5ld9xWdVGIL_W19uLWyropxBbgAoLWyy9G835U/pub?gid=0&single=true&output=csv";
+      try {
+        // Añadimos un parámetro "t" para evitar el uso de caché al solicitar el CSV.
+        const response = await fetch(SHEETS_CSV_URL + "&t=" + Date.now());
+        const csvText = await response.text();
+        const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+        const data = {};
+        parsed.data.forEach(row => {
+          const id = String(row.id || '').trim();
+          const html = String(row.html || '');
+          if (id) {
+            data[id] = html;
+          }
+        });
+        // Reemplazamos window.TEXTS por los datos cargados
+        window.TEXTS = data;
+      } catch (error) {
+        // Si algo falla (por ejemplo, sin conexión), dejamos intacto window.TEXTS.
+        console.warn('No se pudo cargar el CSV de Google Sheets, se usará el respaldo local.', error);
+      }
+    }
+
+    // Cargamos los textos al cargar la página. De este modo, al actualizar la hoja
+    // de cálculo, los cambios aparecerán cuando el usuario recargue el HTML.
+    document.addEventListener('DOMContentLoaded', loadTexts);
+  </script>
 
   <script>
     // Variables para controlar la paginación
@@ -646,9 +711,18 @@ function showModal(pages) {
       }
 
       // Mostrar contenido + X
-      textContent.innerHTML = texts[key] || "Texto no encontrado.";
-      textDisplay.style.display = "block";
-      if (closeBtn) closeBtn.style.display = "block";
+      // Buscamos primero en los textos cargados dinámicamente desde Google Sheets (window.TEXTS),
+      // luego en el objeto de respaldo `texts` definido en texts-data.js. Tras obtener el HTML
+      // aplicamos safeHTML para evitar la ejecución de scripts inesperados.
+      let content = null;
+      if (window.TEXTS && window.TEXTS.hasOwnProperty(key)) {
+        content = window.TEXTS[key];
+      } else if (typeof texts !== 'undefined' && texts && texts.hasOwnProperty(key)) {
+        content = texts[key];
+      }
+      textContent.innerHTML = safeHTML(content || 'Texto no encontrado.');
+      textDisplay.style.display = 'block';
+      if (closeBtn) closeBtn.style.display = 'block';
     }
 
 function changeFontSize(delta) {
