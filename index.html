@@ -426,9 +426,34 @@ a {
   outline: 2px solid var(--accent);
 }
 
+/*
+ * Estilo para los enlaces numéricos provenientes de Google Sheets. Añade un aspecto
+ * de botón que armoniza con el resto de la interfaz. Se aplica solo a los
+ * enlaces que incluyan el atributo `data-id`, utilizado para invocar showText.
+ */
+#textContent a[data-id] {
+  display: inline-block;
+  padding: 8px 16px;
+  margin: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background-color: var(--primary-color);
+  color: white;
+  text-decoration: none;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#textContent a[data-id]:hover {
+  background-color: var(--button-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+
 </style>
-<script type="text/javascript" nonce="19192245bf994671b38863021a4" src="//local.adguard.org?ts=1771559362765&amp;type=content-script&amp;dmn=chatgpt.com&amp;pth=%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile-TAndu5Rmp7No4zzoCZ37m7%26ts%3D492099%26p%3Dfs%26cid%3D1%26sig%3D3a249dbc1c38578919d1ca1096fe1a5ca2399c292cd35a8529f91597e50d39db%26v%3D0&amp;app=com.google.Chrome&amp;css=2&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=1"></script>
-<script type="text/javascript" nonce="19192245bf994671b38863021a4" src="//local.adguard.org?ts=1771559362765&amp;name=AdGuard%20Extra&amp;type=user-script"></script></head>
+<script type="text/javascript" nonce="fdecca09623a4eb5abd05c1cd50" src="//local.adguard.org?ts=1771590349265&amp;type=content-script&amp;dmn=chatgpt.com&amp;pth=%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile-B1sCEnRNHkYryT9rXcEcjm%26ts%3D492114%26p%3Dfs%26cid%3D1%26sig%3Def557dc8de6958e97c8e082d969cf3095070637944fd809780e286742942becd%26v%3D0&amp;app=com.google.Chrome&amp;css=2&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=1"></script>
+<script type="text/javascript" nonce="fdecca09623a4eb5abd05c1cd50" src="//local.adguard.org?ts=1771590349265&amp;name=AdGuard%20Extra&amp;type=user-script"></script></head>
 <body>
   <h1>Libro de los Textos - This War of Mine</h1>
   
@@ -596,9 +621,12 @@ a {
      * necesarios para formatear texto (negritas, cursivas, saltos de línea, listas y enlaces).
      */
     function safeHTML(html) {
+      // Extendemos los atributos permitidos para incluir clases y atributos de datos. Esto
+      // permite usar enlaces estilizados como botones sin que DOMPurify elimine
+      // los atributos necesarios (como `data-id` y `class`).
       return DOMPurify.sanitize(html || "", {
         ALLOWED_TAGS: ['strong','em','br','ul','ol','li','p','span','a'],
-        ALLOWED_ATTR: ['href','title','target','rel','style']
+        ALLOWED_ATTR: ['href','title','target','rel','style','class','data-id']
       });
     }
 
@@ -974,6 +1002,21 @@ document.addEventListener("click", function(e) {
     if (textNumber) {
         showText(parseInt(textNumber));
         closeModal();
+    }
+});
+
+// Delegación de eventos para enlaces numéricos generados desde Google Sheets. Cuando un
+// usuario hace clic en un enlace con atributo `data-id`, se captura el evento,
+// se previene la acción por defecto y se llama a showText con el número
+// correspondiente. Esto permite que los números importados de la hoja de cálculo
+// se comporten como botones de navegación.
+document.addEventListener("click", function(e) {
+    const link = e.target.closest("a[data-id]");
+    if (!link) return;
+    e.preventDefault();
+    const id = link.getAttribute("data-id");
+    if (id) {
+      showText(parseInt(id));
     }
 });
 
