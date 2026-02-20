@@ -3,14 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Libro de los Textos - This War of Mine</title>
-
-    <!-- Cargamos PapaParse y DOMPurify para leer el CSV de Google Sheets y sanear el HTML -->
-    <script type="text/javascript" nonce="606587778b8c4e968405850ad7c" src="//local.adguard.org?ts=1771551533474&amp;type=content-script&amp;dmn=chatgpt.com&amp;pth=%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile-UTXpstAhFzcYCaU8ydC9xQ%26ts%3D492097%26p%3Dfs%26cid%3D1%26sig%3Dae640df4e23ca31a3e201e41afc08c0872e416b00ab762db5fb6415ac96c3d83%26v%3D0&amp;app=com.google.Chrome&amp;css=2&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=1"></script>
-<script type="text/javascript" nonce="606587778b8c4e968405850ad7c" src="//local.adguard.org?ts=1771551533474&amp;name=AdGuard%20Extra&amp;type=user-script"></script><script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
-    <!-- Cargamos el archivo de respaldo con los textos locales. Este archivo define window.TEXTS como objeto. -->
-    <script src="texts-data.js"></script>
+  <title>Libro de los Textos - This War of Mine</title>
   <style>
     :root {
       --primary-color: #660000;
@@ -26,7 +19,7 @@
       font-family: 'Arial', sans-serif;
       margin: 0;
       padding: 15px;
-      padding-bottom: 300px;
+      padding-bottom: 50px;
       background: var(--background-color) url("twom-files/asfalt-dark.png");
       color: var(--text-color);
       line-height: 1.6;
@@ -175,7 +168,16 @@
       z-index: 2;
     }
 
-    a {
+    
+
+    
+
+    /* Visor de textos: oculto hasta que haya contenido (no debe verse caja ni X) */
+    #textDisplay { position: relative; display: none; }
+    #textContent { padding-top: 35px; }
+    #close-text-btn { display: none; }
+
+a {
       color: var(--accent-color);
       text-decoration: underline;
       cursor: pointer;
@@ -206,11 +208,6 @@
       width: 100%;
       z-index: 1000;
     }
-  
-    body {
-    padding-bottom: 50px; /* Para evitar que el reproductor cubra el contenido final */
-    }
-
     #player-controls {
       display: flex;
       align-items: center;
@@ -280,13 +277,65 @@
       border-radius: 5px;
     }
 
-    .pagination-controls {
-      display: flex;
-      justify-content: space-between;
+    
+    /* Estados visibles para Repeat / Shuffle */
+    #additional-controls button.toggle-btn {
+      position: relative;
+      padding: 10px 14px;
+      min-width: 54px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      background: #1f1f1f;
+      color: var(--text-color);
+      line-height: 1;
+      opacity: 0.85;
+    }
+    #additional-controls button.toggle-btn::after {
+      content: attr(data-state-label);
+      display: block;
+      font-size: 11px;
+      line-height: 1.1;
+      margin-top: 6px;
+      color: #bdbdbd;
+      white-space: nowrap;
+    }
+    #additional-controls button.toggle-btn.active,
+    #additional-controls button.toggle-btn.is-active {
+      opacity: 1;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.25);
+    }
+    #additional-controls button.toggle-btn.active::after,
+    #additional-controls button.toggle-btn.is-active::after {
+      color: var(--accent-color);
+      font-weight: 700;
+    }
+
+
+
+
+
+    
+
+    /* Ajuste para que la X del texto use el mismo estilo que los modales */
+    #textDisplay {
+      position: relative;
+      padding-top: 10px;
+    }
+
+.pagination-controls {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
       margin-top: 20px;
       padding: 10px 0;
       border-top: 1px solid var(--border-color);
     }
+
+    /* Fijamos la columna de cada elemento para que el texto no “salte” cuando se oculte un botón */
+    .pagination-controls #prevPageBtn { grid-column: 1; justify-self: start; }
+    .pagination-controls .page-info { grid-column: 2; justify-self: center; text-align: center; }
+    .pagination-controls #nextPageBtn { grid-column: 3; justify-self: end; }
 
     .page-info {
       color: var(--accent-color);
@@ -360,7 +409,24 @@
         right: 10px;
       }
     }
-  </style>
+  
+#additional-controls button{
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+#additional-controls button:hover{
+  transform: translateY(-1px);
+}
+#additional-controls button.active{
+  outline: 2px solid var(--accent);
+}
+
+</style>
 </head>
 <body>
   <h1>Libro de los Textos - This War of Mine</h1>
@@ -372,7 +438,7 @@
      '<strong>PREPARACIÓN DE LA PARTIDA - Ver <button onclick=&quot;showText(100); closeModal(); return false;&quot;>100</button></strong><br><br><em>3. Refugio - Ver <button onclick=&quot;showText(110); closeModal(); return false;&quot;>110</button></em><br><br>- Baraja las cartas del Refugio y repártelas aleatoriamente en los espacios adecuados según el tipo de carta.',
      '<strong>PREPARACIÓN DE LA PARTIDA - Ver <button onclick=&quot;showText(100); closeModal(); return false;&quot;>100</button></strong><br><br><em>4. Acontecimientos</em><br><br>Crea el mazo de Acontecimientos siguiendo este orden:<br><br>- Baraja 3 cartas de Acontecimiento Final y colócalas en su espacio.<br><br>- Coloca la carta Capítulo III encima del mazo.<br><br>- Roba 4 cartas de Acontecimiento y colócalas encima del mazo.<br><br>- Coloca la carta Capítulo II encima del mazo.<br><br>- Roba 3 cartas de Acontecimiento y colócalas encima del mazo.<br><br>- Coloca la carta Capítulo I encima del mazo.',
       '<strong>PREPARACIÓN DE LA PARTIDA</strong><br><br><em>5. Almacén</em><br><br>- Coloca en el Almacén los siguientes objetos:<br><br>- 1 ganzúa<br><br>- 1 pala<br><br>- 3 comidas crudas<br><br>- 4 piezas<br><br>- 4 maderas<br><br>- 2 fichas de agua'
-    ].join('<hr>'))">PREPARACIÓN</button>
+    ])">PREPARACIÓN</button>
     
     <button onclick="showModal([
       '<strong>POR LA MAÑANA - Ver <button onclick=&quot;showText(200); closeModal(); return false;&quot;>200</button></strong><br><br><em>1. Acontecimiento</em><br><br>- Roba y resuelve la carta superior del mazo de Acontecimientos.',
@@ -391,7 +457,7 @@
       '<strong>AMANECER - Ver <button onclick=&quot;showText(800); closeModal(); return false;&quot;>800</button></strong><br><br><em>3. Destino</em><br><br>- Antes o después de resolver una carta de Destino, puedes utilizar Alcohol Casero/Alcohol 100% para reducir la Tristeza en 1 de los personajes, aumentando su Fatiga en 2/1.<br><br>- Roba y resuelve una carta de Destino.',
       '<strong>AMANECER - Ver <button onclick=&quot;showText(800); closeModal(); return false;&quot;>800</button></strong><br><br><em>4. Acción Narrativa</em><br><br>- Roba 2 cartas de Acción Narrativa, léelas y elige una.<br><br>- Devuelve la otra carta al mazo y barájala.',
       '<strong>AMANECER - Ver <button onclick=&quot;showText(800); closeModal(); return false;&quot;>800</button></strong><br><br><em>5. La Muerte Entre Nosotros</em><br><br>- Si algún personaje ha muerto o abandonado el grupo durante el día jugado, tira el dado negro y compara el resultado con la Empatía de cada personaje.<br><br>- Si el resultado es igual o menor a la empatía de un jugador, ese jugador aumenta su Tristeza en 2.'
-    ].join('<hr>'))">TURNO</button>
+    ])">TURNO</button>
 
     <button onclick="showModal([
       '<strong>COMBATE - Ver <button onclick=&quot;showText(900); closeModal(); return false;&quot;>900</button></strong><br><br><em>1. Colocación de Fichas</strong></em><br><br>- Coloca las fichas A, B y/o C en los espacios de la primera columna de la Tabla de Combate dependiendo de las armas que lleven.',
@@ -400,7 +466,7 @@
       '<strong>COMBATE - Ver <button onclick=&quot;showText(900); closeModal(); return false;&quot;>900</button></strong><br><br><em>4. Resultado y Pericia</strong></em><br><br>- La cantidad de iconos (puño, cuchillo, mirilla) que obtengas indica el número de Heridas infligidas.<br><br>- Distribuye estas heridas entre los participantes del combate como desees.<br><br>- Si en la tirada de algún personaje obtienes <<§>>, debes elegir entre fallo o leer la parte inferior de una carta de Destino.<br><br>- La Pericia de cada personaje/enemigo indica cuántas veces puedes repetir la tirada de dado.',
       '<strong>COMBATE - Ver <button onclick=&quot;showText(900); closeModal(); return false;&quot;>900</button></strong><br><br><em>5. Huir y Ataque por la Espalda</strong></em><br><br>- Antes de cada asalto de Combate, los personajes pueden huir.<br><br>- En ese caso, los enemigos atacan por la espalda.<br><br>- En un ataque por la espalda, solo tira los dados el bando que ataca.<br><br>- Después de resolver la huida, los personajes abandonan el lugar de búsqueda y pasan a la etapa de Elegir Hallazgos.<br><br>- Si el ataque por la espalda se hace desde un escondrijo y queda algún enemigo con vida, continúa con un combate normal.',
       '<strong>COMBATE - Ver <button onclick=&quot;showText(900); closeModal(); return false;&quot;>900</button></strong><br><br><em>6. Muerte de Enemigos</strong></em><br><br>- Tras la muerte de un enemigo (que no sea Matón), tira el dado negro y compara el resultado con la Empatía de los personajes presentes.<br><br>- Si el resultado es igual o menor a la empatía, el personaje aumenta su Tristeza en 1.'
-    ].join('<hr>'))">COMBATE</button>
+    ])">COMBATE</button>
 
     <button onclick="showModal([
       '<strong>INTERCAMBIOS - Ver <button onclick=&quot;showText(901); closeModal(); return false;&quot;>901</button></strong><br><br><em>1. Comisión</strong></em><br><br>- Antes de empezar un Intercambio, hay que pagar la comisión de intercambio (si la hubiera).',
@@ -410,7 +476,7 @@
       '<strong>INTERCAMBIOS - Ver <button onclick=&quot;showText(901); closeModal(); return false;&quot;>901</button></strong><br><br><em>3. Mazo Desconocido y Exploración</strong></em><br><br>- Roba tantas cartas de Exploración como indique el lugar de búsqueda escogido y colócalas en el espacio Desconocido.<br><br>- Resuelve todas las cartas por turnos, una carta por jugador.<br><br>- Si alguien muere durante la exploración, lee la entrada <button onclick=&quot;showText(266); closeModal(); return false;&quot;>266</button> del Libro de Textos.',
 
       '<strong>INTERCAMBIOS - Ver <button onclick=&quot;showText(901); closeModal(); return false;&quot;>901</button></strong><br><br><em>4. Elegir Hallazgos</strong></em><br><br>- Devuelve todas las cartas a sus respectivos mazos y barájalos.<br><br>- Añade la cantidad de recursos (agua, madera, pieza) que desees a la Pila de Hallazgos.<br><br>- Elegid todo lo que podáis cargar según la capacidad de carga de los personajes.<br><br>- Descarta el resto.'
-    ].join('<hr>'))">INTERCAMBIOS</button>
+    ])">INTERCAMBIOS</button>
       
       <button onclick="showText(10); return false;">GUARDAR</button>
   </div>
@@ -421,30 +487,30 @@
       'A su vez, las reglas de los textos pueden modificar solo lo anterior.<br><br>Cuando diversas reglas indiquen que deberíais llevar a cabo una acción al mismo tiempo (por ejemplo, al inicio de la fase X), tendréis que decidir la secuencia de dichas acciones.',
       '<strong><em>This War of Mine: el juego</em></strong> de tablero es grande, complejo y elaborado. A buen seguro habrá situaciones con las que os encontraréis que no están cubiertas por las reglas y que despertarán dudas no resueltas, ni siquiera por los textos de las Preguntas Frecuentes.',
       'En dicha situación, tendréis que usar el sentido común y elegir una interpretación que refleje lo mejor posible lo que hubiera pasado en el mundo real.<br><br>Muchas de las reglas están ocultas, y sólo las encontraréis durante el juego.'
-    ].join('<hr>'))">ACERCA DE LAS REGLAS</button>
+    ])">ACERCA DE LAS REGLAS</button>
     
     <button onclick="showModal([
       '<strong>CÓMO UTILIZAR EL LIBRO DE LAS REGLAS</strong><br><br>No leáis ninguno de los textos numerados de este libro antes de encontraros con una entrada en una de las cartas, en el tablero, en una ficha o en otro texto que no indique dicho número de texto en particular.',
       'Sólo entonces tenéis que buscar el número del texto y resolverlo.<br><br><strong>No leáis en voz alta los textos enteros</strong>; hacerlo es seguro que aburrirá a otros jugadores y arruinará la intriga de la partida.',
       'Cuando un jugador resuelva el texto, lo mejor es que lo lea para sí y después, lo mejor que pueda, <strong>narre lo sucedido con sus propias palabras</strong>.'
-    ].join('<hr>'))">CÓMO UTILIZAR EL LIBRO DE LAS REGLAS</button>
+    ])">CÓMO UTILIZAR EL LIBRO DE LAS REGLAS</button>
     
     <button onclick="showModal([
       '<strong>FICHAS EN BLANCO Y FICHAS A, B, C</strong><br><br>Muchos de los textos indican que hay que anotar una entrada de texto y un número de texto en una ficha en Blanco.',
       'Cuando ello sucede, utilizad una de las fichas en Blanco que vienen con el juego y escribid en ella (por ejemplo, a bolígrafo) las palabras requeridas.',
       'Si las reglas requieren que retiréis una ficha en Blanco, la podéis destruir por completo, puesto que la ficha en la que habéis escrito el mensaje no será útil en ninguna partida futura.'
-    ].join('<hr>'))">FICHAS EN BLANCO Y FICHAS A, B, C</button>
+    ])">FICHAS EN BLANCO Y FICHAS A, B, C</button>
     
     <button onclick="showModal([
       '<strong>CONVERSACIONES DURANTE EL JUEGO</strong><br><br><strong><em>This War of Mine: el juego de tablero</em></strong> es un juego completamente cooperativo, que se basa en el relato que se cuenta y en las elecciones que se toman.',
       'La parte más importante del juego es la comunicación entre los jugadores: discutir juntos planes e ideas, interpretar, enriquecer la narración, reflejar las situaciones de los Personajes, tanto con respecto a las reglas como a la historia.',
       'La supervivencia de vuestros Personajes es casi tan importante como la historia que contáis y cómo la recordaréis.'
-    ].join('<hr>'))">CONVERSACIONES DURANTE EL JUEGO</button>
+    ])">CONVERSACIONES DURANTE EL JUEGO</button>
     
     <button onclick="showModal([
       '<strong>SEIS JUGADORES</strong><br><br>Antes de intentar una partida para seis jugadores, se recomienda que la mayoría de los jugadores conozcan muy bien el juego.',
       'Con seis jugadores novatos, el ritmo puede decaer mucho al tener que hacer demasiadas pausas.'
-    ].join('<hr>'))">SEIS JUGADORES</button>
+    ])">SEIS JUGADORES</button>
   </div>
 
   <div class="input-container">
@@ -454,8 +520,9 @@
   </div>
 
   <div class="text-container" id="textDisplay">
-    <!-- El texto se mostrará aquí -->
-  </div>
+    <span id="close-text-btn" class="close" title="Cerrar texto">&times;</span>
+    <div id="textContent"></div>
+</div>
 
   <div class="font-size-container" style="margin-bottom: 60px;">
     <button onclick="changeFontSize(1)">Aumentar tamaño de letra</button>
@@ -468,9 +535,9 @@
       <span class="close" onclick="closeModal()">&times;</span>
       <div id="modalContent"></div>
       <div class="pagination-controls">
-        <button onclick="changePage(-1)">Anterior</button>
+        <button id="prevPageBtn" onclick="changePage(-1)">Anterior</button>
         <span class="page-info" id="pageInfo">Página 1/1</span>
-        <button onclick="changePage(1)">Siguiente</button>
+        <button id="nextPageBtn" onclick="changePage(1)">Siguiente</button>
       </div>
     </div>
   </div>
@@ -489,19 +556,12 @@
         <div id="control-buttons">
           <button id="prev-btn">⏪</button>
           <button id="play-btn">⏯</button>
-          <button id="pause-btn">⏸</button>
-          <button id="stop-btn">⏹</button>
+                    <button id="stop-btn">⏹</button>
           <button id="next-btn">⏩</button>
         </div>
         <div id="additional-controls">
-          <select id="loop-selector">
-            <option value="none">Sin repetir</option>
-            <option value="all">Repetir lista</option>
-          </select>
-          <select id="shuffle-selector">
-            <option value="off">Orden normal</option>
-            <option value="on">Reproducción aleatoria</option>
-          </select>
+          <button id="repeat-btn" class="toggle-btn"  type="button" aria-label="Repetir: desactivado" data-repeat="none" data-state-label="Sin repetir" title="Repetir">🔁</button>
+          <button id="shuffle-btn" class="toggle-btn" data-state-label="Shuffle OFF" type="button" aria-pressed="false" title="Aleatorio">🔀</button>
           <label for="volume-slider">Volumen</label>
           <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1">
         </div>
@@ -510,13 +570,22 @@
     <audio id="audio-player"></audio>
   </div>
 
+  <script src="texts-data.js"></script>
+
   <script>
     // Variables para controlar la paginación
     let currentPages = [];
     let currentPage = 0;
 
-    function showModal(message) {
-      currentPages = typeof message === 'string' ? message.split('<hr>') : message;
+    
+function renderHTML(target, html) {
+    // Centralized HTML rendering point (future sanitization can go here)
+    target.innerHTML = html;
+}
+
+function showModal(pages) {
+      // Pasamos un array de páginas directamente para evitar partir por '<hr>'
+      currentPages = Array.isArray(pages) ? pages : [String(pages)];
       currentPage = 0;
       updateModalContent();
       document.getElementById('myModal').style.display = "block";
@@ -526,14 +595,15 @@
     function updateModalContent() {
       const modalContent = document.getElementById('modalContent');
       const pageInfo = document.getElementById('pageInfo');
-      const paginationButtons = document.querySelectorAll('.pagination-controls button');
-      
+      const prevBtn = document.getElementById('prevPageBtn');
+      const nextBtn = document.getElementById('nextPageBtn');
+
       modalContent.innerHTML = currentPages[currentPage] || "Contenido no disponible";
       pageInfo.textContent = `Página ${currentPage + 1}/${currentPages.length}`;
-      
-      // Actualizar estado de los botones
-      paginationButtons[0].disabled = currentPage === 0;
-      paginationButtons[1].disabled = currentPage === currentPages.length - 1;
+
+      // Mostrar/ocultar botones según corresponda
+      if (prevBtn) prevBtn.style.display = (currentPage === 0) ? 'none' : '';
+      if (nextBtn) nextBtn.style.display = (currentPage === currentPages.length - 1) ? 'none' : '';
     }
 
     function changePage(delta) {
@@ -546,339 +616,42 @@
       document.body.style.overflow = "auto";
     }
 
-    const texts = {
-      1: `El pasillo de un edificio abandonado es un lugar lo bastante seguro como para permitirnos abrir el paquete. Somos como niños desenvolviendo un regalo de Papá Noel, y tenemos las mejillas enrojecidas de excitación mirando los tesoros que contiene: pasta de dientes y un cepillo, ropa interior de hombre, jabón, colonia, un paquete de Marlboro, vodka, arroz, pasta, latas de comida, té, café y azúcar: ¡tiene de todo! Un sombrero cálido, una bufanda y un par de guantes, calcetines, ¡dinero! Y después, en un rincón de la caja, encontramos un sobre azul que contiene una carta:
-      </br></br>
-      «Cariño, mientras entrego este paquete a la organización humanitaria, espero que esta vez te llegue. He puesto todo lo que pediste, lo más necesario. Encontrarás también un dibujo que ha hecho Ivanka para ti: nos muestra a nosotros tres juntos. Te echa mucho de menos y no deja de mirar tus fotos, llorando cada vez que lo hace. Me parte el corazón verlo, pero sé, queridísimo, que no puedes salir de ahí. No te preocupes por nosotros, nos va bien. Ahora mismo vivimos cerca de Viena, porque el otro apartamento era demasiado caro para nosotros. He encontrado un nuevo trabajo y mi madre cuida de Ivanka mientras estoy trabajando. Te echamos mucho de menos y no dejamos de ver todas las noticias acerca de la guerra. Estamos ahorrando ya para poderle enviar otro paquete dentro de unas pocas semanas. ¡Te queremos! Eva e Ivanka».
-      </br></br>
-      ► <strong>Decidimos entregar el paquete a su destinatario... mañana a mis tardar.</strong> Por lo menos parte de él, aunque sólo sean la carta y el dibujo: ver <button onclick="showText(1819); return false;">1819</button>.
-      </br></br>
-      ► <strong>Sería extraño entregar tan sólo la carta. Y el contenido del paquete nos iría tan bien...</strong> Tiramos la carta y el dibujo. Nunca llegarán a su destinatario: ver <button onclick="showText(1542); return false;">1542</button>.`,
-      
-      2: `Estamos de vuelta en el Refugio. Los obreros acabaron antes del amanecer y se marcharon. Pero no podemos dejar de pensar en los objetos de valor enterrados bajo los escombros...
-      </br></br>
-      ► <strong>Guardamos el secreto:</strong> ignoramos la tentación y hacemos todo lo posible para olvidar el tesoro. Esperamos que, cuando la guerra se acabe, las antigüedades vuelvan al museo, que es donde pertenecen. DE VUELTA A LA PARTIDA.
-      </br></br>
-      ► <strong>Desenterramos nosotros mismos para del tesoro:</strong> ¿quién es va a dar cuenta de que falta un puñado de moneda o de que unas cuantas pinturas han desaparecido? Ver <button onclick="showText(1152); return false;">1152</button>.
-      </br></br>
-      ► <strong>Le vendemos la información a los rebeldes:</strong> los objetos culturales ilegalmente ocultos probablemente sean para ellos de gran interés... Ver <button onclick="showText(872); return false;">872</button>.`,
-      
-      3: `El sonido de los muebles moviéndose nos conduce hasta la cocina. Cuando entramos en la habitación encontramos a un soldado obeso, respirando pesadamente y aferrando un hacha de mano. Junto a él hay una botella de alcohol casero medio vacía. El soldado nos apunta con el mango del hacha, pero no parece estar en condiciones de luchar. Se deja caer pesadamente en una silla. Con voz áspera nos dice que este barrio pronto será bombardeado y que por eso está de permiso: tiene que recoger a sus hijos y salir corriendo, como el resto de los lugareños. Pero no tiene intención de dejar nada para los saqueadores. Nos pide ayuda para demoler su casa.
-      </br></br>
-      ► <strong>Nos negamos, preocupados de que el ruido pueda atraer problemas:</strong> ver <button onclick="showText(585); return false;">585</button>.
-      </br></br>
-      ► <strong>Nos mostramos de acuerdo con tan poco usual petición:</strong> devolved 1 carta de Exploración y consultad <button onclick="showText(1600); return false;">1600</button>.`,
-     
-      4: `Los coches que hay en lo alto de los elevadores hidráulicos no van a ir a ninguna parte. A la mayoría les han robado las ruedas y les han arrancado todos los cables; cualquier cosa que podría arrojarse a una estufa para convertirse en calor también ha desaparecido.
-      </br></br>
-      La mayoría de esos vehículos son tan sólo cascarones vacíos. En la mayor parte de los casos, los daños son tan graves que ni siquiera se puede reconocer la marca. Otros aún son reconocibles, incluso con la mayoría de las piezas ausentes. Susurramos entre nosotros, intentando recordar los nombres de unos pocos de los vehículos calcinados.
-      </br></br>
-      De repente, un hombre con barba nos mira desde una cabina destruida por una granada. Lleva en la mano una llave inglesa. «Se nota que sabéis algo de coches. Es raro hoy en día». Con visibles dudas, pero también con amabilidad, nos invita a la parte de atrás.
-      </br></br>
-      ► <strong>El hombre parece inofensivo, y hablar de coches nos recuerda que antaño hubo un mundo normal:</strong> ver <button onclick="showText(1466); return false;">1466</button>.
-      </br></br>
-      ► <strong>Quién sabe qué trama este tío tan raro... y quién más podría andar por aquí ¡Nos largamos!:</strong> DE VUELTA A LA PARTIDA.`,
-      
-      5: `Vemos los camiones. Se dirigen hacia el parque. Esperamos que, sea lo que sea lo que llevan como carga, nos pueda ser de utilidad. En un rincón del parque justo bajo el viejo roble, podemos ver un enorme foso recién excavado. El primer camión da marcha atrás hacia el agujero, levanta el volquete y deja caer su cargamento directamente al foso. Podemos ver demasiado bien lo que es, y el estómago se nos sube a la garganta.
-      </br></br>
-      Docenas de cuerpos humanos se deslizan al foso desde la parte posterior del camión. La mayoría han sido ejecutados y muestran horribles heridas. Otros están aún con vida, y se mueven, intentando salir a rastras.
-      </br></br>
-      Al borde del foso hay dos soldados de pie; una corta ráfaga de subfusil rompe el silencio de la noche, y todo movimiento (y toda vida) se detiene. Gente sucia y demacrada empieza a llenar de tierra el foso. Los soldados les apuntan con sus armas, vigilándoles de cerca. Este «trabajo» durará más o menos la mitad de la noche.
-      </br></br>
-      Permanecemos ocultos, sin decir palabra, incapaces de movernos. En una semana, probablemente la hierba empiece a crecer aquí.
-      </br></br>
-      Finalmente nos movemos, alejándonos el máximo posible de este lugar.
-      </br></br>
-      Tirad el dado Negro y comparad el resultado con la Empatía de cada Personaje presente. Con un resultado igual o menor que la Empatía de un Personaje = aumentad en 1 su Tristeza.
-      </br></br>
-      ► <strong>DE VUELTA A LA PARTIDA.</strong>`,
-      
-      6: `Unos golpes sordos llenan el aire. Cinco imbéciles están dándole patadas a una figura desmayada en el suelo.
-      </br></br>
-      ► <strong>«¡Eh, psst! ¡Se acerca una patrulla armada! ¡Acabamos de escaparnos de ellos, y vosotros deberíais hacer lo mismo!»:</strong> ver <button onclick="showText(1728); return false;">1728</button>.
-      </br></br>
-      ► <strong>Esperemos hasta que acaben. Quizá podamos ayudarle de alguna forma después de que se hayan ido:</strong> devolved 1 carta de Exploración y consultad <button onclick="showText(548); return false;">548</button>.
-      </br></br>
-      ► <strong>No es problema nuestro:</strong> DE VUELTA A LA PARTIDA.`,
-      
-      7: `Al oir ruido en los pisos inferiores, caminamos cuidadosamente hasta la barandilla y miramos por el hueco de la escalera. Tres hombres están pegando a una joven y, de vez en cuando, su débil cuerpo rebota contra la barandilla. Bajamos por la escalera, sin que nos vea nadie. Uno de los hombres echa abajo la puerta del apartamento abandonado, empuja a la víctima al interior y el resto le sigue. Tres hombres corpulentos desaparecen en el apartamento, pero los llantos de la mujer y los gritos de sus atacantes resuenan por todo el bloque de apartamentos.
-      </br></br>
-      ► <strong>Tenemos que ayudarla:</strong> ver <button onclick="showText(1921); return false;">1921</button>.
-      </br></br>
-      ► <strong>No tenemos la más mínima oportunidad, es mejor no interferir:</strong> ver <button onclick="showText(1433); return false;">1433</button>.`,
-      
-      8: `No disparó...
-      </br></br>
-      Cuando salimos al exterior, oímos llorar en voz baja y, cuando estábamos lejos, un débil...
-      </br></br>
-      «Gracias...»
-      </br></br>
-      Anotad «1935» en la Hoja de GUARDAR, en la sección EPÍLOGO.
-      </br></br>
-      ► <strong>DE VUELTA A LA PARTIDA.</strong>`,
-      
-      9: `Al registrar un cobertizo (el más grande de los que hemos encontrado por aquí), nos tropezamos con algo que nos heló la sangre en las venas. Al abrir la enmohecida puerta, un cuerpo putrefacto cayó sobre nosotros... y después otro, y otro... Parece corno si hubiera sido gente que intentó correr, pero fue arrojada al interior, apretujada corno sardinas, y dejada aquí para morir.
-      </br></br>
-      ¿Vale la pena buscar dentro, por si hay algo de valor? Definitivamente no encontraremos nada de comida aquí...
-      </br></br>
-      ► <strong>Registramos el cementerio:</strong> devolved 2 cartas de Exploración y consultad <button onclick="showText(1381); return false;">1381</button>.
-      </br></br>
-      ► <strong>Seguimos adelante, sin mirar atrás:</strong> DE VUELTA A LA PARTIDA.`,
-      
-      10: `<strong>LA BOLSA DE GUARDAR Y LA BOLSA DE TIRAR</strong>
-      </br></br>
-      Hay dos bolsas con cierre incluidas en el juego. Una de ellas es la Bolsa de GUARDAR, la otra es la Bolsa de Tirar. La Bolsa de Tirar se utiliza para meter todos los elementos que se retiran de la partida y ya no formarán parte de ninguna sesión posterior de esa Campaña. La Bolsa de GUARDAR se utiliza para almacenar determinados elementos, tal y como se indica en la sección Como guardar la partida, a continuación.
-      </br></br>
-      <strong>CÓMO GUARDAR LA PARTIDA</strong>
-      </br></br>
-      Meted todas las <strong>fichas/recursos del Almacén</strong> en la Bolsa de GUARDAR.
-      </br></br>
-      En la Hoja de Guardar, escribid la cantidad y el tipo de recursos que tenéis en el Almacén x5 y meted dichos recursos en la caja.
-      </br></br>
-      En la tabla de personaje de la Hoja de GUARDAR, anotad los <strong>nombres de los Personajes y los niveles de sus Estados</strong>. Después, poned las fichas de Estado en la caja y las hojas de Personaje en la Bolsa de GUARDAR.
-      </br></br>
-      En la Hoja de GUARDAR (en los 3 espacios de Lugar), anotad los nombres de <strong>las tres cartas de Lugar</strong> que tenéis actualmente en el tablero y metedlas en la Bolsa de GUARDAR.
-      </br></br>
-      En los correspondientes espacios de Refugio de la Hoja de GUARDAR marcad <strong>qué espacios de Refugio tienen aun cartas de Refugio</strong> (con un símbolo <strong>[X]</strong>). Si quedaban Restos de escombros en el tablero, cambiad el símbolo a <strong>[RE]</strong>. Después, guardad todas las cartas de Refugio en la Bolsa de GUARDAR (no importa si se mezclan).
-      </br></br>
-      Anotad los nombres de las <strong>cartas de Accesorios terminados</strong> en los correspondientes espacios de Refugio de la Hoja de GUARDAR, y guardadlas en la Bolsa de GUARDAR.
-      </br></br>
-      Guardad todas las <strong>fichas de Frío</strong> del espacio de Frío en la Bolsa de GUARDAR.
-      </br></br>
-      En el lugar apropiado de la Hoja de GUARDAR, anotad los nombres de las <strong>cartas de Acontecimiento boca arriba</strong> que hay presentes en el tablero (si las hay) y guardadlas en la Bolsa de GUARDAR.
-      </br></br>
-      Guardad el <strong>mazo de Incursiones nocturnas</strong> en la Bolsa de GUARDAR y las cartas de Incursión nocturna no utilizadas (las que no se incorporaron al mazo de la preparación inicial) en la caja.
-      </br></br>
-      Guardad el <strong>mazo de Accesorios</strong> en la Bolsa de GUARDAR (las cartas del espacio de Accesorios que hay en el tablero, ¡y recordad no mezclarlas con las cartas de Accesorio del espacio de Ideas!).
-      </br></br>
-      Colocad las <strong>cartas de Acción narrativa que tengáis</strong> en la Bolsa de GUARDAR.
-      </br></br>
-      Marcad las <strong>fichas de Cerramiento</strong> con un símbolo <strong>[X]</strong> en los Agujeros correspondientes de la Hoja de GUARDAR y guardad esas fichas en la Bolsa de GUARDAR.
-      </br></br>
-      Anotad la posición de las <strong>fichas en Blanco utilizadas</strong> (si hay alguna en la partida) anotando sus números. Después meted esas fichas en la Bolsa de GUARDAR.
-      </br></br>
-      Meted en la caja el <strong>resto de componentes del juego</strong>.
-      </br></br>
-      Cuando empecéis otra sesión de esta Campaña, al reanudar una partida guardada, modificad las reglas de Preparación tal y como se describe en la sección sobre Cómo reanudar la partida a continuación.
-      </br></br>
-      <strong>COMO REANUDAR LA PARTIDA</strong>
-      </br></br>
-      Sacad todos los componentes del juego de la Bolsa de GUARDAR y colocadlos tal y como se indica:
-      </br></br>
-      Las <strong>fichas/recursos, en el Almacén</strong>.
-      </br></br>
-      Otros <strong>recursos, en el Almacén x5</strong>, según lo anotado en la Hoja de GUARDAR.
-      </br></br>
-      Las <strong>3 cartas de Lugar</strong> en los espacios de Lugar del tablero, según lo anotado en la Hoja de GUARDAR.
-      </br></br>
-      Las <strong>cartas de Refugio</strong> en el tablero, en los espacios correspondientes, según lo anotado en la Hoja de GUARDAR (prestad atención a los nombres visibles en los espacios de Refugio del tablero). En el lugar que marcasteis como <strong>[RE]</strong>, devolved la carta de Escombros para que muestre el lado Resto de escombros.
-      </br></br>
-      Las <strong>cartas de Accesorios</strong> del tablero, en los espacios de Refugio apropiados, según lo anotado en la Hoja de GUARDAR.
-      </br></br>
-      El resto de las cartas de Accesorio, en el espacio de mazo de Accesorios.
-      </br></br>
-      Las <strong>fichas de Frío</strong>, en el espacio de Frío.
-      </br></br>
-      Las <strong>cartas de acontecimientos boca arriba</strong> en sus espacios correspondientes (si había alguna en la partida) según lo anotado en la Hoja de GUARDAR.
-      </br></br>
-      El <strong>mazo de Incursiones nocturnas</strong>, en su espacio.
-      </br></br>
-      Tomad las <strong>cartas de Acción narrativa</strong> que tengáis.
-      </br></br>
-      Colocad las <strong>fichas de Cerramiento</strong> (si había alguna en la partida) en el tablero, según lo anotado en la Hoja de GUARDAR.
-      </br></br>
-      Las <strong>fichas en Blanco utilizadas</strong> en el tablero, según lo anotado en la Hoja de GUARDAR.
-      </br></br>
-      Ahora, sacad de la caja el resto de elementos.
-      </br></br>
-      Coged el <strong>mazo de Acontecimientos</strong> y colocadlo en el espacio de Acontecimientos (recordad no mirar la parte delantera de las cartas).
-      </br></br>
-      Tomad el <strong>mazo de Objetivos</strong> y colocadlo en el espacio de objetivos (recordad no mezclarlos, ni cambiarles el orden).
-      </br></br>
-      Colocad el resto de mazos de la caja en sus correspondientes espacios del tablero.
-      </br></br>
-      La partida ya vuelve a estar como antes, y podéis empezar otra sesión de la Campaña.
-      </br></br>
-      ► <strong>DE VUELTA A LA PARTIDA.</strong>`,
-      
-      11: `La puerta cedió ante las patadas de unas pesadas botas. Dos hombres jóvenes entraron en nuestra casa. Uno de ellos nos mantuvo a raya a punta de fusil, vigilándonos cuidadosamente. El otro empezó a registrar nuestras cosas.
-      </br></br>
-      Elegid 1 Personaje del espacio de Guardia:
-      </br></br>
-      De repente, un fogonazo de reconocimiento...
-      </br></br>
-      «Borko, ¿eres tú?». ¡El chico era el hijo de un amigo mío!
-      </br></br>
-      Sonrió débilmente y me dijo: «No os mováis, o tendré que mataros. Nos habremos ido en unos minutos. ¡Escondeos!».
-      </br></br>
-      ► <strong>Distraigo a Borko hablándole de cosas de antes de la guerra. Después le echo mano al fusil e intento quitárselo:</strong> ver <button onclick="showText(677); return false;">677</button>.
-      </br></br>
-      ► <strong>No hago nada. Podría haber sido peor. Probablemente no nos disparen:</strong> ver <button onclick="showText(250); return false;">250</button>.`,
-      
-      12: `Me apretujo en la tubería, descubriendo rápidamente que es muy estrecha. Me arrastro lentamente, centímetro a centímetro. Cada vez se hace más difícil respirar, y el olor empeora por momentos. Un recodo. Lo doblo con mi último resquicio de fuerza, y después me quedo paralizado. El cuerpo en putrefacción de una mujer delgada está sentado ante mí. Tiene el rostro petrificado en una expresión de dolor. ¿Por qué bajaría hasta aquí? ¿Estaría huyendo? ¿Buscaría refugio? Fuera lo que fuera, permaneció aquí para siempre, y un perro mestizo demacrado le mordisquea la mano. Sus expuestos huesos brillan con un color amarillento. Apenas consigo evitar el vómito.
-      </br></br>
-      Intento convencer al mestizo de que se venga conmigo, sin éxito. Ahogándome del olor, agarro del animal y tiro de él con todas mis fuerzas para alejarlo del cuerpo. El perro se retuerce, gruñe y muerde mis manos. Es sorprendentemente fuerte para una criatura tan esquelética. Sólo se calma cuando oye la voz de su amo.
-      </br></br>
-      Cuando salgo de la tubería, un chico recoge, alegre, a su perro y se va. La mirada de agradecimiento del chaval es mi única recompensa, y me quedo con terroríficos recuerdos y heridas en las manos que, aunque pequeñas, rápidamente empiezan a infectarse...
-      </br></br>
-      Aumentad en 1 la Enfermedad de este Personaje.
-      </br></br>
-      ► <strong>DE VUELTA A LA PARTIDA.</strong>`,
-      
-      13: `Un gemido atraviesa el silencio de la noche. Hay una mujer que está medio sentada y medio tumbada junto a la pared. Parece como si tuviera un tremendo ataque de fiebre. Parlotea sin sentido y suda profusamente por la frente.
-      </br></br>
-      Nos acercamos, pero nos mantenemos a una distancia segura. Podría ser contagiosa. Vemos un fardo en el suelo, a su lado. Una botella vacía, algunas migas de pan y algunos medicamentos. No tiene ni comida ni agua, y no parece tener ni siquiera la energía suficiente como para llegar a sus medicinas. ¿Es posible ayudarla? Miramos las cajas y los prospectos de las medicinas. Son remedios contra la gripe y antibióticos.
-      </br></br>
-      ► <strong>Intentamos ayudarla. Le damos algo de agua y le ayudamos a tragarse las pastillas. Esperamos no enfermar:</strong> ver <button onclick="showText(498); return false;">498</button>.
-      </br></br>
-      ► <strong>Cogemos las medicinas y nos vamos:</strong> ver <button onclick="showText(1339); return false;">1339</button>.`,
-      
-      14: `Nos reunimos con un vecino nuestro. Es un hombre de edad que se llama Josip. Durante varias semanas ha estado reuniendo combustible y piezas sueltas de coches abandonados por toda la ciudad, y utilizando lo reunido para reparar y reaprovisionar su viejo Volkswagen.
-      </br></br>
-      Quiere huir de la ciudad con su mujer, Jovanka, y llegar al campo, donde está su hija. A veces pasa por nuestro refugio y nos pregunta si hemos encontrado algo que le pueda ser de utilidad. Siempre nos recompensa con pan que Jovanka hornea a partir de la harina que aún les queda.
-      </br></br>
-      ► <strong><em>«Podríamos tener algo para ti»:</em></strong> descartad 1 Pieza mecánica y consultad <button onclick="showText(1641); return false;">1641</button>.
-      </br></br>
-      ► <strong><em>«Lo sentimos Josip. No tenemos nada para ti».</em></strong> Josip se despide de todos y se va. DE VUELTA A LA PARTIDA.`,
-      
-      15: `Primero oímos ruido de motores, luego pesadas botas que impactan contra el suelo... y después gritos. Ruido de puertas echadas abajo, disparos y un ¡BANG! de nuevo. Los soldados irrumpen en unos cuantos edificios a la vez y registran todos los pisos. A quienes se encuentran se los llevan en camiones, no importa lo que gritan y lloran.
-      </br></br>
-      Corremos al interior de uno de los apartamentos para escondernos en una esquina, tras algunos escombros y harapos.
-      </br></br>
-      No estamos solos. Una pareja de ancianos también se oculta aquí.
-      </br></br>
-      Cuando los soldados miran dentro, uno de ellos ve a la mujer y la saca arrastrándola del pelo. Se nos congela el corazón. Miramos al hombre. Sus ojos están llorosos, pero ni siquiera se mueve. En su lugar, mira en dirección contraria, pretendiendo no haber visto lo que ha sucedido. Es como si no quisiera admitir que nunca volverá a verla.
-      </br></br>
-      Cuando se la llevan, mira por la ventana un buen rato, susurrando para sí algunas palabras incoherentes.
-      </br></br>
-      Ésta es nuestra guerra. La gente hace cualquier cosa para sobrevivir. A veces un padre roba comida a sus hijos, otras veces un marido hace la vista gorda cuando alguien secuestra a su mujer: todos quieren vivir. Una madre debe decidir quién debe.morir, su hermano o su hijo ... o ambos. Somos personas rotas. Se ha cruzado una línea invisible.
-      </br></br>
-      ► <strong>DE VUELTA A LA PARTIDA.</strong>`,
-      
-      16: `<em>«¡Eh! ¡No soy un ladrón! ¡Por favor, abrid la puerta! Vivo cerca».</em>
-      </br></br>
-      Durante un rato, hablamos a través de la puerta cerrada. Finalmente la abrimos.
-      </br></br>
-      <em>«Mi nombre es Teodor. Llevo unos cuantos días viviendo a cinco casas de aquí. Soy carpintero y... ya sabéis. Si necesitáis alguna cosa, cogeré mis herramientas y vendré a intentar arreglar lo que sea; en todo caso, ¡ya sabéis dónde encontrarme!».</em>
-      </br></br>
-      Anotad «Carpintero, 16» en una ficha en Blanco y colocadla en el Almacén.
-      </br></br>
-      <strong>CARPINTERO:</strong>
-      </br></br>
-      Al final de cada fase de Amanecer, podéis descartar fichas por un valor de 5 o más para llamar al Carpintero.
-      </br></br>
-      Gracias a su ayuda, podéis colocar instantáneamente cualquier carta de Accesorio, descartando las fichas/recursos requeridos.
-      </br></br>
-      Además, podéis comprar las fichas requeridas al Carpintero (ver Diario: Hoja de INTERCAMBIO, Comisión de Intercambio: O).
-      </br></br>
-      También podéis comprarle Madera y Piezas: tratad cada recurso comprado como si tuviera un valor de 1.
-      </br></br>
-      ► <strong>DE VUELTA A LA PARTIDA.</strong>`,
+    const texts = window.TEXTS || {};
 
-      17: `Vemos de inmediato un artículo, ilustrado con una foto de dos cadáveres:
-      </br></br>
-      <strong><em>«Romeo y Julieta en una ciudad asediada».</em></strong>
-      </br></br>
-      <em>«Ayer al mediodía, dos jóvenes intentaron cruzar la frontera que divide en dos la ciudad asediada. Fueron abatidos por faego de francotiradores. Bosko B. (25 años) murió en el acto. La mujer, Admira J. (25 años), resultó herida. Tras caer al suelo, consiguió arrastrarse hasta el cuerpo del hombre y ponerle el brazo alrededor, muriendo poco después. Hasta el momento, ninguno de los bandos ha reivindicado las muertes. Y, desafortunadamente, ninguno de los bandos ha recogido los cadáveres de la joven pareja: siguen tendidos donde les abatieron. ¿Responderá alguien por esto?».</em>
-      </br></br>
-      Tiramos el periódico.
-      </br></br>
-      ► <strong>DE VUELTA A LA PARTIDA.</strong>`,
-
-      18: `Al entrar, hemos notado de inmediato que algo no andaba bien. Se supone que el lugar está abandonado, pero es obvio que hay alguien. Podemos oir voces en la habitación vecina, y también luz que se filtra bajo la puerta. Nos acercamos a la puerta y miramos por el ojo de la cerradura. Dos hombres están sentados junto a la pared sobre viejos colchones. Ambos están envueltos en mantas e intentan por todos los medios posibles mantenerse calientes, ayudados por un pequeño fuego que arde en el centro de la habitación. Podemos oír de lo que hablan.
-      </br></br>
-      ► <strong>Escuchamos detenidamente lo que dicen:</strong> devolved 1 carta de Exploración y consultad <button onclick="showText(1052); return false;">1052</button>. 
-      </br></br>
-      ► <strong>No tenemos tiempo para esto:</strong> DE VUELTA A LA PARTIDA.`,
-
-      19: `Hay un hombre sin brazos tendido en el suelo. Los muñones de lo que habían sido sus brazos emergen de una chaqueta que antaño estuvo de moda. Vemos sábanas sucias, una silla y lo poco que queda de un violín en una esquina.
-      </br></br>
-      El hombre nos señala una sábana que aparentemente ha desgarrado con los dientes. <em>«Esa es mi cuerda. La he hecho yo, pero no puedo atar el nudo. Ayudadme».</em>
-      </br></br>
-      <em>«¿Qué estáis mirando? No parece que lo vaya a tocar más, así que podéis llevaros el violín. Ayudadme tan sólo a ponerme el nudo alrededor del cuello. Eso es todo lo que os pido...»</em>
-      </br></br>
-      ► <strong>«No podemos ayudarte...»:</strong> DE VUELTA ALAPARTIDA.
-      </br></br>
-      ► <strong>«Como quieras»:</strong> ver <button onclick="showText(1172); return false;">1172</button>.`,
-
-      20: `El sonido de cristales rotos quiebra el silencio, e instantes más tarde olemos a quemado. Al ver salir humo de una habitación corremos para ver un incendio que se extiende terriblemente rápido. Podemos salvar algo de equipo, pero a un coste muy alto.
-      </br></br>
-      Descartad 1 Accesorio construido por vosotros (colocadlo de vuelta en el mazo de Accesorios) o aumentad en 1 las Heridas de 1 Personaje.
-      </br></br>
-      ► <strong>DE VUELTA A LA PARTIDA.</strong>`,
-      
-      212: `La carta sobre la mesa atrae de inmediato nuestra atención.
-      «Querida mamá,
-      Hoy Bosko y yo cruzaremos el muro que divide la ciudad.
-      Sabes que no podemos permanecer aquí más tiempo. 
-      Bosko ya no está seguro aquí, y podría morir porque es de allí. Es uno de ellos.
-      Sabes que tengo que hacer esto: queremos estar juntos, pase lo que pase. 
-      Tú no abandonarías a pedre en una situación como ésta, ¿verdad?
-      No te preocupes por mí. Bosko se ocupará de mí y su madre vive allí. 
-      Estaré mejor sabiendo que no te has de preocupar por mí en este lado. 
-      Te llamaremos en el momento en el que lleguemos a un lugar seguro y, cuando acabe la guerra, volveremos, te lo prometo.
-      Te quiero. Tu Admira».
-      Echamos una mirada alrededor; la puerta de la habitación de al lado está abierta. 
-      En un rincón, frente a la ventana, una anciana está sentada en un sillón y parece dormida. 
-      Tiene entre sus manos, arrugado, un periódico.
-      La mujer está muerta.
-      Nos cuesta un rato darnos cuenta del frasco vacío de píldoras para dormir que tiene en el regazo, 
-      y de que hay pastillas esparcidas por el suelo.`
-    };
-
-    /* 
-     * Devuelve de forma segura el HTML de un texto. 
-     * Sanitiza el contenido para evitar inyección de scripts cuando la comunidad edita los textos.
-     */
-    function safeHTML(html) {
-      return DOMPurify.sanitize(html, {
-        ALLOWED_TAGS: ['strong','em','br','ul','ol','li','p','span','a'],
-        ALLOWED_ATTR: ['href','title','target','rel','style']
-      });
-    }
-
-    /**
-     * Carga el CSV publicado en Google Sheets y actualiza window.TEXTS.
-     * Si la descarga falla, se mantiene el contenido de texts-data.js.
-     */
-    async function loadTexts() {
-      const SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT6z8MOCn3sKvo4dfsNhhVkvi7RkM7c9IElP3qaQy5ld9xWdVGIL_W19uLWyropxBbgAoLWyy9G835U/pub?gid=0&single=true&output=csv";
-      try {
-        const response = await fetch(SHEETS_CSV_URL + "&t=" + Date.now());
-        const csvText = await response.text();
-        const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-        const data = {};
-        parsed.data.forEach(row => {
-          const id = String(row.id || '').trim();
-          const html = String(row.html || '');
-          if(id) {
-            data[id] = html;
-          }
-        });
-        window.TEXTS = data;
-      } catch (error) {
-        console.warn("No se pudo cargar el CSV de Google Sheets, se usará el respaldo local.", error);
-      }
-    }
-    // Cargamos los textos al cargar la página
-    document.addEventListener("DOMContentLoaded", loadTexts);
 
     function showText(textNumber = null) {
       const inputField = document.getElementById('textNumber');
       const textDisplay = document.getElementById('textDisplay');
-      let id;
-      if (textNumber !== null) {
-        id = textNumber;
-        inputField.value = id;
-      } else {
-        id = inputField.value;
+      const textContent = document.getElementById('textContent');
+      const closeBtn = document.getElementById('close-text-btn');
+
+      if (!textDisplay || !textContent) return;
+
+      // Obtiene la clave (trim para evitar espacios)
+      let key = null;
+      if (textNumber !== null && textNumber !== undefined) {
+        key = String(textNumber).trim();
+        if (inputField) inputField.value = textNumber;
+      } else if (inputField) {
+        const v = String(inputField.value || "").trim();
+        if (v) key = v;
       }
-      // Buscamos primero en los textos cargados dinámicamente, después en los textos de respaldo internos
-      let content = (window.TEXTS && window.TEXTS[id]) || (typeof texts !== 'undefined' ? texts[id] : null);
-      textDisplay.innerHTML = safeHTML(content || "Texto no encontrado.");
+
+      // Si no hay número, ocultar visor por completo
+      if (!key) {
+        textContent.innerHTML = "";
+        if (closeBtn) closeBtn.style.display = "none";
+        textDisplay.style.display = "none";
+        return;
+      }
+
+      // Mostrar contenido + X
+      textContent.innerHTML = texts[key] || "Texto no encontrado.";
+      textDisplay.style.display = "block";
+      if (closeBtn) closeBtn.style.display = "block";
     }
 
-    function changeFontSize(delta) {
+function changeFontSize(delta) {
       const textDisplay = document.getElementById('textDisplay');
       const currentSize = parseFloat(window.getComputedStyle(textDisplay).fontSize);
       textDisplay.style.fontSize = `${currentSize + delta}px`;
@@ -906,23 +679,30 @@
     ];
 
     let currentIndex = 0;
-    let loopMode = "none"; // "none" o "all"
+    let loopMode = "none"; // "none", "all", "one"
     let shuffleMode = false;
 
     const audioPlayer = document.getElementById('audio-player');
     const playlistSelect = document.getElementById('playlist');
     const coverImg = document.getElementById('cover-img');
-    const playBtn = document.getElementById('play-btn');
-    const pauseBtn = document.getElementById('pause-btn');
-    const stopBtn = document.getElementById('stop-btn');
+    const playBtn = document.getElementById('play-btn');    const stopBtn = document.getElementById('stop-btn');
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
 
-    function formatTime(seconds) {
+    
+    function updatePlayButton() {
+      // When playing, show pause icon; when paused, show play icon
+      playBtn.textContent = audioPlayer.paused ? "▶️" : "⏸";
+    }
+function formatTime(seconds) {
       const min = Math.floor(seconds / 60);
       const sec = Math.floor(seconds % 60);
       return (min < 10 ? "0" + min : min) + ":" + (sec < 10 ? "0" + sec : sec);
     }
+
+    audioPlayer.addEventListener("play", updatePlayButton);
+    audioPlayer.addEventListener("pause", updatePlayButton);
+    audioPlayer.addEventListener("ended", updatePlayButton);
 
     audioPlayer.addEventListener("timeupdate", () => {
       const current = audioPlayer.currentTime;
@@ -945,6 +725,7 @@
       audioPlayer.src = song.file;
       coverImg.src = song.cover;
       updatePlaylist();
+      updatePlayButton();
     }
 
     function updatePlaylist() {
@@ -967,16 +748,17 @@
     });
 
     playBtn.addEventListener("click", () => {
-      audioPlayer.play();
-    });
-
-    pauseBtn.addEventListener("click", () => {
-      audioPlayer.pause();
+      if (audioPlayer.paused) {
+        audioPlayer.play();
+      } else {
+        audioPlayer.pause();
+      }
     });
 
     stopBtn.addEventListener("click", () => {
       audioPlayer.pause();
       audioPlayer.currentTime = 0;
+      updatePlayButton();
     });
 
     prevBtn.addEventListener("click", () => {
@@ -1011,6 +793,13 @@
     });
 
     audioPlayer.addEventListener("ended", () => {
+      if (loopMode === "one") {
+        // Repeat current track
+        audioPlayer.currentTime = 0;
+        audioPlayer.play();
+        return;
+      }
+
       if (shuffleMode) {
         let randomIndex = Math.floor(Math.random() * songs.length);
         while (randomIndex === currentIndex && songs.length > 1) {
@@ -1018,28 +807,123 @@
         }
         loadSong(randomIndex);
         audioPlayer.play();
-      } else if (currentIndex < songs.length - 1) {
+        return;
+      }
+
+      if (currentIndex < songs.length - 1) {
         loadSong(currentIndex + 1);
         audioPlayer.play();
       } else if (loopMode === "all") {
         loadSong(0);
         audioPlayer.play();
+      } else {
+        // No repeat: stop at end
+        audioPlayer.pause();
+        audioPlayer.currentTime = 0;
       }
     });
 
-    document.getElementById("loop-selector").addEventListener("change", function(){
-      loopMode = this.value; // "none" o "all"
-    });
+    const repeatBtn = document.getElementById("repeat-btn");
+    const shuffleBtn = document.getElementById("shuffle-btn");
 
-    document.getElementById("shuffle-selector").addEventListener("change", function(){
-      shuffleMode = (this.value === "on");
-    });
+    function updateRepeatButton() {
+      if (!repeatBtn) return;
+      const mode = repeatBtn.getAttribute("data-repeat") || "none";
 
-    document.getElementById("volume-slider").addEventListener("input", function(){
+      // Reset
+      repeatBtn.classList.remove("active", "is-active");
+
+      if (mode === "none") {
+        repeatBtn.textContent = "🔁";
+        repeatBtn.setAttribute("aria-label", "Repetir: sin repetir");
+        repeatBtn.setAttribute("title", "Repetición: Sin repetir");
+        repeatBtn.setAttribute("data-state-label", "Sin repetir");
+      } else if (mode === "all") {
+        repeatBtn.textContent = "🔁";
+        repeatBtn.setAttribute("aria-label", "Repetir: lista");
+        repeatBtn.setAttribute("title", "Repetición: Repetir lista");
+        repeatBtn.setAttribute("data-state-label", "Repetir lista");
+        repeatBtn.classList.add("active", "is-active");
+      } else {
+        repeatBtn.textContent = "🔂";
+        repeatBtn.setAttribute("aria-label", "Repetir: pista");
+        repeatBtn.setAttribute("title", "Repetición: Repetir pista");
+        repeatBtn.setAttribute("data-state-label", "Repetir pista");
+        repeatBtn.classList.add("active", "is-active");
+      }
+    }
+
+    function updateShuffleButton() {
+      if (!shuffleBtn) return;
+      shuffleBtn.classList.toggle("active", !!shuffleMode);
+      shuffleBtn.classList.toggle("is-active", !!shuffleMode);
+      shuffleBtn.setAttribute("aria-pressed", shuffleMode ? "true" : "false");
+      shuffleBtn.setAttribute("title", shuffleMode ? "Shuffle: ON" : "Shuffle: OFF");
+      shuffleBtn.setAttribute("data-state-label", shuffleMode ? "Shuffle ON" : "Shuffle OFF");
+    }
+
+
+
+function setRepeatMode(mode) {
+      loopMode = mode;
+      if (repeatBtn) repeatBtn.setAttribute("data-repeat", mode);
+      updateRepeatButton();
+    }
+
+    if (repeatBtn) {
+      repeatBtn.addEventListener("click", () => {
+        const current = repeatBtn.getAttribute("data-repeat") || "none";
+        const next = (current === "none") ? "all" : (current === "all") ? "one" : "none";
+        setRepeatMode(next);
+      });
+      updateRepeatButton();
+    }
+
+    if (shuffleBtn) {
+      shuffleBtn.addEventListener("click", () => {
+        shuffleMode = !shuffleMode;
+        updateShuffleButton();
+      });
+    }
+document.getElementById("volume-slider").addEventListener("input", function(){
       audioPlayer.volume = parseFloat(this.value);
     });
 
     loadSong(0);
-  </script>
+  
+// Event delegation for dynamic modal buttons
+document.addEventListener("click", function(e) {
+    const btn = e.target.closest("[data-show-text]");
+    if (!btn) return;
+
+    const textNumber = btn.getAttribute("data-show-text");
+    if (textNumber) {
+        showText(parseInt(textNumber));
+        closeModal();
+    }
+});
+
+
+
+
+
+
+
+// Cerrar visor de textos con la "X"
+document.addEventListener("click", function(e) {
+  if (e.target && e.target.id === "close-text-btn") {
+    const textDisplay = document.getElementById("textDisplay");
+    const textContent = document.getElementById("textContent");
+    const closeBtn = document.getElementById("close-text-btn");
+    const inputField = document.getElementById("textNumber");
+
+    if (textContent) textContent.innerHTML = "";
+    if (closeBtn) closeBtn.style.display = "none";
+    if (textDisplay) textDisplay.style.display = "none";
+    if (inputField) inputField.value = "";
+  }
+});
+
+</script>
 </body>
 </html>
